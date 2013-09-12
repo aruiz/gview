@@ -39,8 +39,9 @@ namespace Data
 
   public interface Model : Object
   {
-    public abstract ulong n_items {get; set;}
-    public signal void modified (ulong position, ulong removed, ulong inserted);
+    public abstract ulong  n_items  {get; set;}
+
+    public signal   void   modified (ulong position, ulong removed, ulong inserted);
     public abstract Object get_item (ulong index);
   }
 
@@ -52,6 +53,9 @@ namespace Data
 
   class ListView : Gtk.Container, Gtk.Scrollable
   {
+    //TODO: Consider the ability to set the cache size
+    private int average_height = 0;
+    private uint CACHE_SIZE   = 100;
     private List<RowDelegate> row_cache = null;
     private Model?            _model    = null;
 
@@ -86,31 +90,102 @@ namespace Data
        //TODO: Check that Type implements RowDelegate
 
        //TODO: Chech that n_items is not ULONG_MAX
-       for (ulong i = 0; i < model.n_items; i++)
+       for (ulong i = 0; i < CACHE_SIZE; i++)
        {
-          row_cache.append (Object.new (row_delegate_class, "model", model, "index", i) as Data.RowDelegate);
+         var widget = Object.new (row_delegate_class, "model", model, "index", i) as Data.RowDelegate;
+         widget.show_all ();
+         widget.set_child_visible (true);
+         widget.set_parent (this);
+         row_cache.append (widget);
        }
+    }
+
+    public override void add (Gtk.Widget widget)
+    {
+    }
+
+    public override void remove (Gtk.Widget widget)
+    {
+    }
+
+    public override void forall_internal (bool include_internals, Gtk.Callback cb)
+    {
+      for (int i = 0; i < CACHE_SIZE; i++)
+        cb (row_cache.nth_data (i) as Gtk.Widget);
     }
 
     public override void get_preferred_width (out int min_width, out int nat_width)
     {
+      min_width = 0;
+      nat_width = 0;
+      for (int i = 0; i < CACHE_SIZE; i++)
+      {
+        int tmp_min, tmp_nat;
+        var widget = row_cache.nth_data(i);
+        widget.get_preferred_width (out tmp_min, out tmp_nat);
+        if (tmp_nat > nat_width)
+          nat_width = tmp_nat;
+        if (tmp_min > min_width)
+          min_width = tmp_min;
+      }
     }
 
     public override void get_preferred_height (out int min_height, out int nat_height)
     {
+      min_height = 0;
+      nat_height = 0;
+      for (int i = 0; i < CACHE_SIZE; i++)
+      {
+        int tmp_min, tmp_nat;
+        var widget = row_cache.nth_data(i);
+        widget.get_preferred_height (out tmp_min, out tmp_nat);
+        nat_height += tmp_nat;
+        min_height += tmp_min;
+      }
+
+      average_height = nat_height / 100;
     }
 
     public override void get_preferred_width_for_height (int height, out int min_width, out int nat_width)
     {
+      min_width = 0;
+      nat_width = 0;
+      for (int i = 0; i < CACHE_SIZE; i++)
+      {
+        int tmp_min, tmp_nat;
+        var widget = row_cache.nth_data(i);
+        widget.get_preferred_width_for_height (height, out tmp_min, out tmp_nat);
+        if (tmp_nat > nat_width)
+          nat_width = tmp_nat;
+        if (tmp_min > min_width)
+          min_width = tmp_min;
+      }
     }
 
     public override void get_preferred_height_for_width (int width, out int min_height, out int nat_height)
     {
+      min_height = 0;
+      nat_height = 0;
+      for (int i = 0; i < CACHE_SIZE; i++)
+      {
+        int tmp_min, tmp_nat;
+        var widget = row_cache.nth_data(i);
+        widget.get_preferred_height_for_width (width, out tmp_min, out tmp_nat);
+        nat_height += tmp_nat;
+        min_height += tmp_min;
+      }
     }
 
     public override void size_allocate (Gtk.Allocation allocation)
     {
       base.size_allocate (allocation);
+      allocation.height = average_height;
+      int offset = 0;
+      for (int i = 0; i < CACHE_SIZE; i++)
+      {
+        row_cache.nth_data(i).size_allocate (allocation);
+        allocation.y += average_height;
+      }
     }
   }
 }
