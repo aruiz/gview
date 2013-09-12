@@ -1,1 +1,2 @@
-valac --vapidir=/usr/local/share/vala/vapi/model.vapi --pkg gtk+-3.0 --pkg model listview.vala
+listview: listview.vala
+	valac --pkg gtk+-3.0 listview.vala
