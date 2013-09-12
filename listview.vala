@@ -47,6 +47,7 @@ namespace Data
   public interface RowDelegate : Gtk.Bin
   {
     public abstract Model model {get; set;}
+    public abstract uint index  {get; set;}
   }
 
   class ListView : Gtk.Container, Gtk.Scrollable
@@ -68,6 +69,7 @@ namespace Data
       set
       {
         this._model = model;
+        //TODO: Change the model of all the elements in the row cache
       }
     }
 
@@ -86,7 +88,7 @@ namespace Data
        //TODO: Chech that n_items is not ULONG_MAX
        for (ulong i = 0; i < model.n_items; i++)
        {
-
+          row_cache.append (Object.new (row_delegate_class, "model", model, "index", i) as Data.RowDelegate);
        }
     }
 
@@ -117,6 +119,7 @@ namespace Test {
   public class MyRow : Data.RowDelegate, Gtk.Bin
   {
     public Data.Model model {get;set;}
+    public uint index {get; set;}
 
     construct {
       add(new Gtk.Button.with_label ("asdasd"));
@@ -125,7 +128,7 @@ namespace Test {
 
   public class MyModel : Data.Model, Object
   {
-    public  ulong n_items { get; set; }
+    public ulong n_items { get; set; }
 
     construct {
       n_items = 5;
