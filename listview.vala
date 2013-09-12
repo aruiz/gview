@@ -40,6 +40,8 @@ namespace Data
   public interface Model : Object
   {
     public abstract ulong n_items {get; set;}
+    public signal void modified (ulong position, ulong removed, ulong inserted);
+    public abstract Object get_item (ulong index);
   }
 
   public interface RowDelegate : Gtk.Bin
@@ -47,17 +49,45 @@ namespace Data
     public abstract Model model {get; set;}
   }
 
-  class ListView : Gtk.Container
+  class ListView : Gtk.Container, Gtk.Scrollable
   {
+    private List<RowDelegate> row_cache = null;
+    private Model?            _model    = null;
 
-    private RowDelegate[]? row_cache = null;
-    private Model? _model = null;
+    public Gtk.Adjustment vadjustment {set;get;}
+    public Gtk.Adjustment hadjustment {set;get;}
 
-    public Model model { get {return _model;} set {_model = value;}}
+    public Gtk.ScrollablePolicy vscroll_policy {set;get;}
+    public Gtk.ScrollablePolicy hscroll_policy {set;get;}
+
+    public Model model {
+      get
+      {
+        return _model;
+      }
+      set
+      {
+        this._model = model;
+      }
+    }
+
+    public Type row_delegate_class { get; construct;}
 
     construct
     {
       set_has_window (false);
+    }
+
+    public ListView (Model model, Type row_delegate_class)
+    {
+       this.model = model;
+       //TODO: Check that Type implements RowDelegate
+
+       //TODO: Chech that n_items is not ULONG_MAX
+       for (ulong i = 0; i < model.n_items; i++)
+       {
+
+       }
     }
 
     public override void get_preferred_width (out int min_width, out int nat_width)
@@ -81,13 +111,41 @@ namespace Data
       base.size_allocate (allocation);
     }
   }
+}
+
+namespace Test {
+  public class MyRow : Data.RowDelegate, Gtk.Bin
+  {
+    public Data.Model model {get;set;}
+
+    construct {
+      add(new Gtk.Button.with_label ("asdasd"));
+    }
+  }
+
+  public class MyModel : Data.Model, Object
+  {
+    public  ulong n_items { get; set; }
+
+    construct {
+      n_items = 5;
+    }
+
+    public  Object get_item (ulong index)
+    {
+      return this as Object;
+    }
+  }
+
 
   public static int main (string[] args)
   {
     Gtk.init (ref args);
 
+    var model = new MyModel();
+
     var w = new Gtk.Window (Gtk.WindowType.TOPLEVEL);
-    w.add (new ListView());
+    w.add (new Data.ListView(model, typeof (MyRow)));
     w.show_all ();
 
     Gtk.main ();
