@@ -39,8 +39,8 @@ namespace Data
         //TODO: Change the model of all the elements in the row cache
       }
     }
-
-    public Type row_delegate_class { get; construct;}
+    private Type _row_delegate_class;
+    public Type row_delegate_class { get {return _row_delegate_class;} }
 
     construct
     {
@@ -50,7 +50,9 @@ namespace Data
     public ListView (Model model, Type row_delegate_class)
     {
        this.model = model;
+       this._row_delegate_class = row_delegate_class;
        //TODO: store row_delegate_class
+
        assert (row_delegate_class.is_a (typeof (RowDelegate)));
 
        //TODO: Chech that n_items is not ULONG_MAX
@@ -156,12 +158,50 @@ namespace Data
 namespace Test {
   public class MyRow : Data.RowDelegate, Gtk.Bin
   {
-    public Data.Model model {get;set;}
-    public uint index {get; set;}
+    //TODO: Reuse the widget
+    private uint _index = 0;
+    private bool index_set = false;
+    private Data.Model? _model = null;
+    public Data.Model model {
+      get {return _model;}
+      set
+      {
+        _model = value;
+        if (index_set)
+        {
+          if (get_child () != null)
+            remove (get_child ());
+          add(new Gtk.Button.with_label ((_model.get_item (index) as MyItem).some_data));
+        }
+      }
+    }
+
+    public uint index {
+      get
+      {
+        return _index;
+      }
+      set
+      {
+        _index = value;
+        index_set = true;
+        if (_model != null)
+        {
+          if (get_child () != null)
+            remove (get_child ());
+          add(new Gtk.Button.with_label ((_model.get_item (index) as MyItem).some_data));
+        }
+      }
+    }
 
     construct {
-      add(new Gtk.Button.with_label ("asdasd"));
+
     }
+  }
+
+  public class MyItem : Object
+  {
+    public string some_data = "http://www.lolcats.com/images/u/12/52/allforme.jpg";
   }
 
   public class MyModel : Data.Model, Object
@@ -174,7 +214,7 @@ namespace Test {
 
     public  Object get_item (ulong index)
     {
-      return this as Object;
+      return new MyItem () as Object;
     }
   }
 
