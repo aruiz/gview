@@ -1,42 +1,5 @@
 namespace Data
 {
-/*  class View : Gtk.Widget, Gtk.Scrollable
-  {
-    public Gtk.Adjustment vadjustment {set;get;}
-    public Gtk.Adjustment hadjustment {set;get;}
-
-    public Gtk.ScrollablePolicy vscroll_policy {set;get;}
-    public Gtk.ScrollablePolicy hscroll_policy {set;get;}
-
-    private Model.List? _model = null;
-    public Model.List? model
-    {
-      set
-      {
-        _model = value;
-        model_changed (_model);
-      }
-      get {return _model;}
-    }
-    public signal void model_changed (Model.List model);
-
-    public View (Model.List? model = null)
-    {
-      this.model = model;
-      draw.connect (draw_cb);
-      set_has_window (false);
-    }
-
-    bool draw_cb (Cairo.Context ct)
-    {
-      Gtk.Allocation alloc;
-      get_allocation (out alloc);
-
-      message ("%d %d %d %d", alloc.x, alloc.width, alloc.y, alloc.height);
-      return true;
-    }
-  }*/
-
   public interface Model : Object
   {
     public abstract ulong  n_items  {get; set;}
@@ -110,7 +73,7 @@ namespace Data
 
     public override void forall_internal (bool include_internals, Gtk.Callback cb)
     {
-      for (int i = 0; i < CACHE_SIZE; i++)
+      for (int i = 0; i < row_cache.length (); i++)
         cb (row_cache.nth_data (i) as Gtk.Widget);
     }
 
@@ -118,7 +81,7 @@ namespace Data
     {
       min_width = 0;
       nat_width = 0;
-      for (int i = 0; i < CACHE_SIZE; i++)
+      for (int i = 0; i < row_cache.length (); i++)
       {
         int tmp_min, tmp_nat;
         var widget = row_cache.nth_data(i);
@@ -134,7 +97,7 @@ namespace Data
     {
       min_height = 0;
       nat_height = 0;
-      for (int i = 0; i < CACHE_SIZE; i++)
+      for (int i = 0; i < row_cache.length (); i++)
       {
         int tmp_min, tmp_nat;
         var widget = row_cache.nth_data(i);
@@ -150,7 +113,7 @@ namespace Data
     {
       min_width = 0;
       nat_width = 0;
-      for (int i = 0; i < CACHE_SIZE; i++)
+      for (int i = 0; i < row_cache.length (); i++)
       {
         int tmp_min, tmp_nat;
         var widget = row_cache.nth_data(i);
@@ -166,7 +129,7 @@ namespace Data
     {
       min_height = 0;
       nat_height = 0;
-      for (int i = 0; i < CACHE_SIZE; i++)
+      for (int i = 0; i < row_cache.length (); i++)
       {
         int tmp_min, tmp_nat;
         var widget = row_cache.nth_data(i);
@@ -180,8 +143,7 @@ namespace Data
     {
       base.size_allocate (allocation);
       allocation.height = average_height;
-      int offset = 0;
-      for (int i = 0; i < CACHE_SIZE; i++)
+      for (int i = 0; i < row_cache.length (); i++)
       {
         row_cache.nth_data(i).size_allocate (allocation);
         allocation.y += average_height;
