@@ -50,7 +50,8 @@ namespace Data
     public ListView (Model model, Type row_delegate_class)
     {
        this.model = model;
-       //TODO: Check that Type implements RowDelegate
+       //TODO: store row_delegate_class
+       assert (row_delegate_class.is_a (typeof (RowDelegate)));
 
        //TODO: Chech that n_items is not ULONG_MAX
        for (ulong i = 0; i < CACHE_SIZE; i++)
