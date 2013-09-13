@@ -56,7 +56,14 @@ namespace Data
        assert (row_delegate_class.is_a (typeof (RowDelegate)));
 
        //TODO: Chech that n_items is not ULONG_MAX
-       for (ulong i = 0; i < CACHE_SIZE; i++)
+       ulong n_items;
+
+       if (model.n_items > CACHE_SIZE)
+         n_items = CACHE_SIZE;
+       else
+         n_items = model.n_items;
+
+       for (ulong i = 0; i < n_items; i++)
        {
          var widget = Object.new (row_delegate_class, "model", model, "index", i) as Data.RowDelegate;
          widget.show_all ();
@@ -109,7 +116,7 @@ namespace Data
         min_height += tmp_min;
       }
 
-      average_height = nat_height / 100;
+      average_height = nat_height / (int)row_cache.length ();
     }
 
     public override void get_preferred_width_for_height (int height, out int min_width, out int nat_width)
@@ -172,6 +179,7 @@ namespace Test {
           if (get_child () != null)
             remove (get_child ());
           add(new Gtk.Button.with_label ((_model.get_item (index) as MyItem).some_data));
+          (get_child() as Gtk.Button).clicked.connect(() => { warning ("%d", (int)_index); });
         }
       }
     }
@@ -190,6 +198,7 @@ namespace Test {
           if (get_child () != null)
             remove (get_child ());
           add(new Gtk.Button.with_label ((_model.get_item (index) as MyItem).some_data));
+          (get_child() as Gtk.Button).clicked.connect(() => { warning ("%d", (int)_index); });
         }
       }
     }
@@ -209,7 +218,7 @@ namespace Test {
     public ulong n_items { get; set; }
 
     construct {
-      n_items = 5;
+      n_items = 110;
     }
 
     public  Object get_item (ulong index)
