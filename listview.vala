@@ -11,22 +11,22 @@ namespace Data
   public interface RowDelegate : Gtk.Bin
   {
     public abstract Model model {get; set;}
-    public abstract uint index  {get; set;}
+    public abstract ulong index  {get; set;}
   }
 
   class ListView : Gtk.Container, Gtk.Scrollable
   {
     //TODO: Consider the ability to set the cache size
     private int average_height = 0;
-    private uint CACHE_SIZE   = 100;
     private List<RowDelegate> row_cache = null;
-    private Model?            _model    = null;
+    private Model ?            _model    = null;
 
     public Gtk.Adjustment vadjustment {set;get;}
     public Gtk.Adjustment hadjustment {set;get;}
 
     public Gtk.ScrollablePolicy vscroll_policy {set;get;}
     public Gtk.ScrollablePolicy hscroll_policy {set;get;}
+
 
     public Model model {
       get
@@ -55,17 +55,18 @@ namespace Data
         warning ("DataModel::modified was emitted with no insertion and no removals");
         return;
       }
-      if (inserted > 0 && inserted > 0)
-      {
-      }
-      if (inserted > 0)
-      {
-        //TODO: Check if affects cache
-        append_cache_item (position);
-      }
+      //TODO: Check if affects any of the cache items or not
+      //TODO: Check cache size
       if (removed > 0)
-      {
-      }
+        for (ulong i = 0; i < removed; i++)
+          remove_cache_item (position + i);
+      if (inserted > 0)
+        for (ulong i = 0; i < inserted; i++)
+          append_cache_item (position + i);
+
+      for (ulong i = position + inserted ; i < row_cache.length (); i++)
+        row_cache.nth_data ((int)i).index = i;
+      show_all ();
     }
 
     private Type _row_delegate_class;
@@ -86,14 +87,7 @@ namespace Data
 
     private void reset_cache ()
     {
-       ulong n_items;
-
-       if (_model.n_items > CACHE_SIZE)
-         n_items = CACHE_SIZE;
-       else
-         n_items = _model.n_items;
-
-       for (ulong i = 0; i < n_items; i++)
+      for (ulong i = 0; i < _model.n_items; i++)
         append_cache_item (i);
     }
 
@@ -101,12 +95,18 @@ namespace Data
     {
       var widget = Object.new (_row_delegate_class, "model", _model, "index", i) as Data.RowDelegate;
 
-      widget.show_all ();
       widget.set_parent (this);
       row_cache.append (widget);
 
       //TODO: Asses visibility
       widget.set_child_visible (true);
+    }
+
+    private void remove_cache_item (ulong i)
+    {
+      unowned List<RowDelegate> item = row_cache.nth ((int)i);
+      item.data.unparent ();
+      row_cache.remove_link (item);
     }
 
     public override void add (Gtk.Widget widget)
@@ -136,7 +136,7 @@ namespace Data
       for (int i = 0; i < row_cache.length (); i++)
       {
         int tmp_min, tmp_nat;
-        var widget = row_cache.nth_data(i);
+        var widget = row_cache.nth_data (i);
         widget.get_preferred_width (out tmp_min, out tmp_nat);
         if (tmp_nat > nat_width)
           nat_width = tmp_nat;
@@ -150,13 +150,13 @@ namespace Data
       min_height = 0;
       nat_height = 0;
 
-      if (row_cache.length () == 0)
+      if (row_cache.length ()== 0)
         return;
 
       for (int i = 0; i < row_cache.length (); i++)
       {
         int tmp_min, tmp_nat;
-        var widget = row_cache.nth_data(i);
+        var widget = row_cache.nth_data (i);
         widget.get_preferred_height (out tmp_min, out tmp_nat);
         nat_height += tmp_nat;
         min_height += tmp_min;
@@ -170,13 +170,13 @@ namespace Data
       min_width = 0;
       nat_width = 0;
 
-      if (row_cache.length () == 0)
+      if (row_cache.length ()== 0)
               return;
 
       for (int i = 0; i < row_cache.length (); i++)
       {
         int tmp_min, tmp_nat;
-        var widget = row_cache.nth_data(i);
+        var widget = row_cache.nth_data (i);
         widget.get_preferred_width_for_height (height, out tmp_min, out tmp_nat);
         if (tmp_nat > nat_width)
           nat_width = tmp_nat;
@@ -196,7 +196,7 @@ namespace Data
       for (int i = 0; i < row_cache.length (); i++)
       {
         int tmp_min, tmp_nat;
-        var widget = row_cache.nth_data(i);
+        var widget = row_cache.nth_data (i);
         widget.get_preferred_height_for_width (width, out tmp_min, out tmp_nat);
         nat_height += tmp_nat;
         min_height += tmp_min;
@@ -213,7 +213,7 @@ namespace Data
       allocation.height = average_height;
       for (int i = 0; i < row_cache.length (); i++)
       {
-        row_cache.nth_data(i).size_allocate (allocation);
+        row_cache.nth_data (i).size_allocate (allocation);
         allocation.y += average_height;
       }
     }
@@ -224,7 +224,7 @@ namespace Test {
   public class MyRow : Data.RowDelegate, Gtk.Bin
   {
     //TODO: Reuse the widget
-    private uint _index = 0;
+    private ulong _index = 0;
     private bool index_set = false;
     private Data.Model? _model = null;
     public Data.Model model {
@@ -242,7 +242,7 @@ namespace Test {
       }
     }
 
-    public uint index {
+    public ulong index {
       get
       {
         return _index;
@@ -255,7 +255,7 @@ namespace Test {
         {
           if (get_child () != null)
             remove (get_child ());
-          add(new Gtk.Button.with_label ((_model.get_item (index) as MyItem).some_data));
+          add(new Gtk.Button.with_label ("%d - %s".printf((int)_index, (_model.get_item (index) as MyItem).some_data)));
           (get_child() as Gtk.Button).clicked.connect(() => { warning ("%d", (int)_index); });
         }
       }
@@ -279,7 +279,8 @@ namespace Test {
       n_items = 5;
     }
 
-    public  Object get_item (ulong index)
+    //TODO: Think about the ownership transfership on this method
+    public Object get_item (ulong index)
     {
       return new MyItem () as Object;
     }
@@ -289,6 +290,14 @@ namespace Test {
       n_items += 1;
       modified (n_items - 1, 0, 1);
     }
+
+    public void remove_item ()
+    {
+      if (n_items == 0)
+        return;
+      n_items -= 1;
+      modified (0, 1, 0);
+    }
   }
 
   public static int main (string[] args)
@@ -297,6 +306,7 @@ namespace Test {
 
     var model = new MyModel();
     Timeout.add (1000, () => {model.add_item (); return true;});
+    Timeout.add (800, () => {model.remove_item (); return true;});
 
     var w = new Gtk.Window (Gtk.WindowType.TOPLEVEL);
     w.add (new Data.ListView(model, typeof (MyRow)));
