@@ -55,11 +55,12 @@ namespace Data
         warning ("DataModel::modified was emitted with no insertion and no removals");
         return;
       }
+
       //TODO: Check if affects any of the cache items or not
       //TODO: Check cache size
       if (removed > 0)
-        for (ulong i = 0; i < removed; i++)
-          remove_cache_item (position + i);
+        for (ulong i = 0; i < removed;   i++)
+          remove_cache_item (position);
       if (inserted > 0)
         for (ulong i = 0; i < inserted; i++)
           append_cache_item (position + i);
@@ -255,7 +256,7 @@ namespace Test {
         {
           if (get_child () != null)
             remove (get_child ());
-          add(new Gtk.Button.with_label ("%d - %s".printf((int)_index, (_model.get_item (index) as MyItem).some_data)));
+          add(new Gtk.Button.with_label ("%d - %d".printf((int)_index, (int)(_model.get_item (index) as MyItem).index)));
           (get_child() as Gtk.Button).clicked.connect(() => { warning ("%d", (int)_index); });
         }
       }
@@ -269,6 +270,12 @@ namespace Test {
   public class MyItem : Object
   {
     public string some_data = "http://www.lolcats.com/images/u/12/52/allforme.jpg";
+    public ulong index;
+
+    public MyItem (ulong index)
+    {
+      this.index = index;
+    }
   }
 
   public class MyModel : Data.Model, Object
@@ -276,13 +283,13 @@ namespace Test {
     public ulong n_items { get; set; }
 
     construct {
-      n_items = 5;
+      n_items = 15;
     }
 
     //TODO: Think about the ownership transfership on this method
     public Object get_item (ulong index)
     {
-      return new MyItem () as Object;
+      return new MyItem (index) as Object;
     }
 
     public void add_item ()
@@ -295,8 +302,16 @@ namespace Test {
     {
       if (n_items == 0)
         return;
-      n_items -= 1;
-      modified (0, 1, 0);
+
+      if (n_items < 3)
+      {
+        n_items -= 1;
+        modified (0, 1, 0);
+        return;
+      }
+
+      n_items -= 3;
+      modified (1, 3, 0);
     }
   }
 
@@ -305,8 +320,8 @@ namespace Test {
     Gtk.init (ref args);
 
     var model = new MyModel();
-    Timeout.add (1000, () => {model.add_item (); return true;});
-    Timeout.add (800, () => {model.remove_item (); return true;});
+    Timeout.add (400, () => {model.remove_item (); return model.n_items != 0;});
+    Timeout.add (500, () => {if (model.n_items == 0) return false; model.add_item ();    return model.n_items != 0;});
 
     var w = new Gtk.Window (Gtk.WindowType.TOPLEVEL);
     w.add (new Data.ListView(model, typeof (MyRow)));
