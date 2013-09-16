@@ -16,11 +16,21 @@ namespace Data
 
   class ListView : Gtk.Container, Gtk.Scrollable
   {
-    //TODO: Consider the ability to set the cache size
+    //Internal geometry
+    private int real_height;
+    private int real_width;
     private int average_height = 0;
+
     private List<RowDelegate> row_cache = null;
+
+    //TODO: Consider the ability to set the cache size
     private Model ?            _model    = null;
 
+    //RowDelegate class
+    private Type _row_delegate_class;
+    public  Type  row_delegate_class { get {return _row_delegate_class;} }
+
+    //Gtk.Scrollable properties
     public Gtk.Adjustment vadjustment {set;get;}
     public Gtk.Adjustment hadjustment {set;get;}
 
@@ -41,37 +51,11 @@ namespace Data
         }
 
         _model = value;
-        //TODO: Change the model of all the elements in the row cache
+        //TODO: Put the adjustments to the origin
         reset_cache ();
-
         _model.modified.connect (modified_cb);
       }
     }
-
-    private void modified_cb (ulong position, ulong removed, ulong inserted)
-    {
-      if (inserted == 0 && removed == 0)
-      {
-        warning ("DataModel::modified was emitted with no insertion and no removals");
-        return;
-      }
-
-      //TODO: Check if affects any of the cache items or not
-      //TODO: Check cache size
-      if (removed > 0)
-        for (ulong i = 0; i < removed;   i++)
-          remove_cache_item (position);
-      if (inserted > 0)
-        for (ulong i = 0; i < inserted; i++)
-          append_cache_item (position + i);
-
-      for (ulong i = position + inserted ; i < row_cache.length (); i++)
-        row_cache.nth_data ((int)i).index = i;
-      show_all ();
-    }
-
-    private Type _row_delegate_class;
-    public Type row_delegate_class { get {return _row_delegate_class;} }
 
     construct
     {
@@ -109,6 +93,29 @@ namespace Data
       item.data.unparent ();
       row_cache.remove_link (item);
     }
+
+    private void modified_cb (ulong position, ulong removed, ulong inserted)
+    {
+      if (inserted == 0 && removed == 0)
+      {
+        warning ("DataModel::modified was emitted with no insertion and no removals");
+        return;
+      }
+
+      //TODO: Check if affects any of the cache items or not
+      //TODO: Check cache size
+      if (removed > 0)
+        for (ulong i = 0; i < removed;   i++)
+          remove_cache_item (position);
+      if (inserted > 0)
+        for (ulong i = 0; i < inserted; i++)
+          append_cache_item (position + i);
+
+      for (ulong i = position + inserted ; i < row_cache.length (); i++)
+        row_cache.nth_data ((int)i).index = i;
+      show_all ();
+    }
+
 
     public override void add (Gtk.Widget widget)
     {
@@ -283,7 +290,7 @@ namespace Test {
     public ulong n_items { get; set; }
 
     construct {
-      n_items = 15;
+      n_items = 100;
     }
 
     //TODO: Think about the ownership transfership on this method
@@ -320,11 +327,11 @@ namespace Test {
     Gtk.init (ref args);
 
     var model = new MyModel();
-    Timeout.add (400, () => {model.remove_item (); return model.n_items != 0;});
-    Timeout.add (500, () => {if (model.n_items == 0) return false; model.add_item ();    return model.n_items != 0;});
 
     var w = new Gtk.Window (Gtk.WindowType.TOPLEVEL);
-    w.add (new Data.ListView(model, typeof (MyRow)));
+    var sw = new Gtk.ScrolledWindow (null, null);
+    sw.add (new Data.ListView(model, typeof (MyRow)));
+    w.add(sw);
     w.show_all ();
 
     Gtk.main ();
