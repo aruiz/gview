@@ -31,12 +31,67 @@ namespace Data
     public  Type  row_delegate_class { get {return _row_delegate_class;} }
 
     //Gtk.Scrollable properties
-    public Gtk.Adjustment vadjustment {set;get;}
-    public Gtk.Adjustment hadjustment {set;get;}
+    private Gtk.Adjustment _vadjustment;
+    public Gtk.Adjustment vadjustment {
+      set
+      {
+        int min;
+        int nat;
+
+        double val = 0;
+        double lower = 0;
+        double upper;
+        //TODO: step/page increment?
+        double step_increment = 1;
+        double page_increment  = 1;
+        double page_size;
+
+        if (_hadjustment != null)
+          _vadjustment.value_changed.disconnect (vadj_value_chanched_cb);
+
+        get_preferred_height (out min, out nat);
+        upper = (double)nat;
+        page_size = 10;
+
+
+        if (value == null)
+          _vadjustment = new Gtk.Adjustment (val, lower, upper,
+                                             step_increment, page_increment, page_size);
+        else
+          _vadjustment = value;
+      }
+
+      get
+      {
+        return _vadjustment;
+      }
+    }
+
+    private Gtk.Adjustment _hadjustment;
+    public Gtk.Adjustment hadjustment {
+      set
+      {
+        int min;
+        int nat;
+
+        if (_hadjustment != null)
+          _hadjustment.value_changed.disconnect (hadj_value_changed_cb);
+
+        _hadjustment = value;
+        _hadjustment.value_changed.connect (hadj_value_changed_cb);
+        get_preferred_width (out min, out nat);
+        _hadjustment.set_lower (0);
+        _hadjustment.set_upper ((double)nat);
+        _vadjustment.set_value (0);
+      }
+      get
+      {
+        return _hadjustment;
+      }
+    }
 
     public Gtk.ScrollablePolicy vscroll_policy {set;get;}
     public Gtk.ScrollablePolicy hscroll_policy {set;get;}
-
 
     public Model model {
       get
@@ -116,6 +171,13 @@ namespace Data
       show_all ();
     }
 
+    private void vadj_value_chanched_cb (Gtk.Adjustment adj)
+    {
+    }
+
+    private void hadj_value_changed_cb (Gtk.Adjustment adj)
+    {
+    }
 
     public override void add (Gtk.Widget widget)
     {
