@@ -31,28 +31,27 @@ namespace Data
     public  Type  row_delegate_class { get {return _row_delegate_class;} }
 
     //Gtk.Scrollable properties
-    private Gtk.Adjustment _vadjustment;
+    private Gtk.Adjustment _vadjustment = null;
     public Gtk.Adjustment vadjustment {
       set
       {
-        if (_hadjustment == value)
+        if (_vadjustment == value)
           return;
 
-        if (_hadjustment != null)
-          _vadjustment.value_changed.disconnect (vadj_value_chanched_cb);
+        if (_vadjustment != null)
+          _vadjustment.value_changed.disconnect (vadj_value_changed_cb);
 
         if (value == null)
           _vadjustment = new Gtk.Adjustment (0,0,0,0,0,0);
         else
           _vadjustment = value;
 
-        update_vadjustment ();
         _vadjustment.set_lower          (0);
         _vadjustment.set_step_increment (10);
         _vadjustment.set_page_increment (100);
+        update_vadjustment ();
 
-
-        _vadjustment.value_changed.connect (vadj_value_chanched_cb);
+        _vadjustment.value_changed.connect (vadj_value_changed_cb);
       }
 
       get
@@ -61,31 +60,28 @@ namespace Data
       }
     }
 
-    private void update_vadjustment ()
-    {
-      int min;
-      int nat;
-      get_preferred_height (out min, out nat);
-
-      _vadjustment.set_upper     ((double)nat);
-      _vadjustment.set_page_size ((double)get_allocated_height ());
-    }
-
-    private Gtk.Adjustment _hadjustment;
+    private Gtk.Adjustment _hadjustment = null;
     public Gtk.Adjustment hadjustment {
       set
       {
-        int min;
-        int nat;
+        _hadjustment = value;
+
+        if (_hadjustment == value)
+          return;
 
         if (_hadjustment != null)
           _hadjustment.value_changed.disconnect (hadj_value_changed_cb);
 
-        _hadjustment = value;
+        if (value == null)
+          _hadjustment = new Gtk.Adjustment (0,0,0,0,0,0);
+        else
+
+        _hadjustment.set_lower          (0);
+        _hadjustment.set_step_increment (10);
+        _hadjustment.set_page_increment (100);
+        update_hadjustment ();
+
         _hadjustment.value_changed.connect (hadj_value_changed_cb);
-        get_preferred_width (out min, out nat);
-        _hadjustment.set_lower (0);
-        _hadjustment.set_upper ((double)nat);
       }
       get
       {
@@ -174,7 +170,30 @@ namespace Data
       show_all ();
     }
 
-    private void vadj_value_chanched_cb (Gtk.Adjustment adj)
+    //GtkScrollable methods
+    private void update_vadjustment ()
+    {
+      int min, nat;
+      //TODO: Cache natural height?
+      get_preferred_height (out min, out nat);
+
+      _vadjustment.set_upper     ((double)nat);
+      _vadjustment.set_page_size ((double)get_allocated_height ());
+    }
+
+    private void update_hadjustment ()
+    {
+      int min, nat;
+      //TODO: Cache natural height?
+      get_preferred_width (out min, out nat);
+
+      _hadjustment.set_upper     ((double)nat);
+      _hadjustment.set_page_size ((double)get_allocated_width ());
+
+      warning ("%f - %f", (double)nat, (double)get_allocated_width ());
+    }
+
+    private void vadj_value_changed_cb (Gtk.Adjustment adj)
     {
       queue_resize ();
     }
@@ -184,6 +203,7 @@ namespace Data
       queue_resize ();
     }
 
+    //GtkContainer methods
     public override void add (Gtk.Widget widget)
     {
       warning ("Widgets cannot be directly added");
@@ -200,6 +220,7 @@ namespace Data
         cb (row_cache.nth_data (i) as Gtk.Widget);
     }
 
+    //Geometry methods
     public override void get_preferred_width (out int min_width, out int nat_width)
     {
       min_width = 0;
@@ -282,7 +303,8 @@ namespace Data
     {
       base.size_allocate (allocation);
 
-      allocation.y -= (int)_vadjustment.get_value();
+      allocation.y -= (int)_vadjustment.get_value ();
+      allocation.x -= (int)_hadjustment.get_value ();
 
       if (row_cache.length () == 0)
         return;
@@ -295,6 +317,7 @@ namespace Data
       }
 
       update_vadjustment ();
+      update_hadjustment ();
     }
   }
 }
