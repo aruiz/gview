@@ -35,36 +35,40 @@ namespace Data
     public Gtk.Adjustment vadjustment {
       set
       {
-        int min;
-        int nat;
-
-        double val = 0;
-        double lower = 0;
-        double upper;
-        //TODO: step/page increment?
-        double step_increment = 1;
-        double page_increment  = 1;
-        double page_size;
+        if (_hadjustment == value)
+          return;
 
         if (_hadjustment != null)
           _vadjustment.value_changed.disconnect (vadj_value_chanched_cb);
 
-        get_preferred_height (out min, out nat);
-        upper = (double)nat;
-        page_size = 10;
-
-
         if (value == null)
-          _vadjustment = new Gtk.Adjustment (val, lower, upper,
-                                             step_increment, page_increment, page_size);
+          _vadjustment = new Gtk.Adjustment (0,0,0,0,0,0);
         else
           _vadjustment = value;
+
+        update_vadjustment ();
+        _vadjustment.set_lower          (0);
+        _vadjustment.set_step_increment (10);
+        _vadjustment.set_page_increment (100);
+
+
+        _vadjustment.value_changed.connect (vadj_value_chanched_cb);
       }
 
       get
       {
         return _vadjustment;
       }
+    }
+
+    private void update_vadjustment ()
+    {
+      int min;
+      int nat;
+      get_preferred_height (out min, out nat);
+
+      _vadjustment.set_upper     ((double)nat);
+      _vadjustment.set_page_size ((double)get_allocated_height ());
     }
 
     private Gtk.Adjustment _hadjustment;
@@ -82,7 +86,6 @@ namespace Data
         get_preferred_width (out min, out nat);
         _hadjustment.set_lower (0);
         _hadjustment.set_upper ((double)nat);
-        _vadjustment.set_value (0);
       }
       get
       {
@@ -173,10 +176,12 @@ namespace Data
 
     private void vadj_value_chanched_cb (Gtk.Adjustment adj)
     {
+      queue_resize ();
     }
 
     private void hadj_value_changed_cb (Gtk.Adjustment adj)
     {
+      queue_resize ();
     }
 
     public override void add (Gtk.Widget widget)
@@ -277,6 +282,8 @@ namespace Data
     {
       base.size_allocate (allocation);
 
+      allocation.y -= (int)_vadjustment.get_value();
+
       if (row_cache.length () == 0)
         return;
 
@@ -286,6 +293,8 @@ namespace Data
         row_cache.nth_data (i).size_allocate (allocation);
         allocation.y += average_height;
       }
+
+      update_vadjustment ();
     }
   }
 }
@@ -393,6 +402,7 @@ namespace Test {
     var w = new Gtk.Window (Gtk.WindowType.TOPLEVEL);
     var sw = new Gtk.ScrolledWindow (null, null);
     sw.add (new Data.ListView(model, typeof (MyRow)));
+    sw.set_policy (Gtk.PolicyType.ALWAYS, Gtk.PolicyType.ALWAYS);
     w.add(sw);
     w.show_all ();
 
