@@ -189,8 +189,6 @@ namespace Data
 
       _hadjustment.set_upper     ((double)nat);
       _hadjustment.set_page_size ((double)get_allocated_width ());
-
-      warning ("%f - %f", (double)nat, (double)get_allocated_width ());
     }
 
     private void vadj_value_changed_cb (Gtk.Adjustment adj)
@@ -302,9 +300,14 @@ namespace Data
     public override void size_allocate (Gtk.Allocation allocation)
     {
       base.size_allocate (allocation);
+      if (get_window () != null)
+        get_window ().move_resize (allocation.x, allocation.y, allocation.width, allocation.height);
+
+      allocation.x = 0;
+      allocation.y = 0;
 
       allocation.y -= (int)_vadjustment.get_value ();
-      allocation.x -= (int)_hadjustment.get_value ();
+      allocation.x += (int)_hadjustment.get_value ();
 
       if (row_cache.length () == 0)
         return;
